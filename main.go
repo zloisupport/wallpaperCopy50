@@ -8,7 +8,20 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
+	"unsafe"
+)
+
+var (
+	user32               = syscall.NewLazyDLL("user32.dll")
+	systemParametersInfo = user32.NewProc("SystemParametersInfoW")
+)
+
+const (
+	SPI_SETDESKWALLPAPER = 20
+	SPIF_UPDATEINIFILE   = 0x01
+	SPIF_SENDCHANGE      = 0x02
 )
 
 func main() {
@@ -37,6 +50,9 @@ func main() {
 		randomFiles = randomFiles[:50]
 	}
 
+	randomFile := randomFiles[rand.Intn(len(randomFiles))]
+	fmt.Println(randomFile)
+
 	userDir, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -58,8 +74,15 @@ func main() {
 		if err := copyFile(srcPath, dstPath); err != nil {
 			fmt.Println("Error:", err)
 			os.Exit(1)
-		}
 
+		}
+	}
+	wallpaperPath := syscall.StringToUTF16Ptr(filepath.Join(picturesDir, randomFile.Name()))
+	result, _, _ := systemParametersInfo.Call(uintptr(SPI_SETDESKWALLPAPER), 0, uintptr(unsafe.Pointer(wallpaperPath)), uintptr(SPIF_UPDATEINIFILE|SPIF_SENDCHANGE))
+	if result != 0 {
+		fmt.Println("Wallpaper set")
+	} else {
+		fmt.Println("Ops, code:", result)
 	}
 }
 
