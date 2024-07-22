@@ -54,6 +54,7 @@ func copyRandomWallpaper() {
 			newFiles = append(newFiles, file)
 		}
 	}
+
 	if len(newFiles) >= 50 {
 		randomIndex := rand.Perm(len(newFiles))
 		for i := 0; i < 50; i++ {
@@ -82,29 +83,39 @@ func copyRandomWallpaper() {
 
 }
 func pictureFolder() string {
-	userDir, err := os.UserHomeDir()
-	if err != nil {
-		fmt.Println("Error:", err)
-		os.Exit(1)
-	}
+	userDir := strings.ToLower(os.Getenv("windir"))
+	userDir = strings.Replace(userDir, "windows", "", 1)
 
-	picturesDir := filepath.Join(userDir, "Pictures/Wallpaper")
+	picturesDir := filepath.Join(userDir, "Pictures")
 	if _, err := os.Stat(picturesDir); os.IsNotExist(err) {
 		if err := os.Mkdir(picturesDir, 0755); err != nil {
 			fmt.Println("Error:", err)
 			os.Exit(1)
 		}
 	}
-	return picturesDir
+
+	wallpaperDir := filepath.Join(picturesDir, "Wallpaper")
+	if _, err := os.Stat(wallpaperDir); os.IsNotExist(err) {
+		if err := os.Mkdir(wallpaperDir, 0755); err != nil {
+			fmt.Println("Error:", err)
+			os.Exit(1)
+		}
+	}
+
+	return wallpaperDir
 }
 
 func copyDefaultWallpapers(files []string) {
 	pictureFolder := pictureFolder()
-
+	wallpaperPath, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+	wallpaperPath = filepath.Join(wallpaperPath, "wallpaper")
 	for _, file := range files {
-		srcPath := filepath.Join("./wallpaper", file)
+		srcPath := filepath.Join(wallpaperPath, file)
 		dstPath := filepath.Join(pictureFolder, file)
-		if checkFileS(dstPath) {
+		if !checkFileS(dstPath) {
 			if err := copyFile(srcPath, dstPath); err != nil {
 				fmt.Println("Error:", err)
 				os.Exit(1)
@@ -114,14 +125,10 @@ func copyDefaultWallpapers(files []string) {
 }
 
 func setWallpaper() {
-
 	file := openDefaultJson()
 	copyDefaultWallpapers(file)
 	wall := selectWallpaper(file)
-	fStatus := checkFile(wall)
-	if fStatus {
-		setDefaultWallpaper(pictureFolder(), wall)
-	}
+	setDefaultWallpaper(wall)
 }
 
 func checkFile(file os.FileInfo) bool {
@@ -138,12 +145,11 @@ func checkFileS(file string) bool {
 	return false
 }
 
-func setDefaultWallpaper(picturesDir string, randomFile os.FileInfo) {
+func setDefaultWallpaper(randomFile os.FileInfo) {
+	picturesDir := pictureFolder()
 	if len(picturesDir) != 0 {
-		dir, err := os.Getwd()
-		if err != nil {
-			log.Fatal(err)
-		}
+		dir := pictureFolder()
+
 		wallpaperPath := syscall.StringToUTF16Ptr(filepath.Join(dir, randomFile.Name()))
 		result, _, _ := systemParametersInfo.Call(uintptr(SPI_SETDESKWALLPAPER), 0, uintptr(unsafe.Pointer(wallpaperPath)), uintptr(SPIF_UPDATEINIFILE|SPIF_SENDCHANGE))
 		if result != 0 {
@@ -157,8 +163,11 @@ func setDefaultWallpaper(picturesDir string, randomFile os.FileInfo) {
 func selectWallpaper(files []string) os.FileInfo {
 	wallpapers := Wallpapers{name: files}
 	randomFile := rand.Intn(len(wallpapers.name))
+	wallpapersPath := pictureFolder()
 
-	fileInfo, err := os.Stat(wallpapers.name[randomFile])
+	defaultWallpaperPath := filepath.Join(wallpapersPath, wallpapers.name[randomFile])
+
+	fileInfo, err := os.Stat(defaultWallpaperPath)
 	if err != nil {
 		log.Fatal(err)
 	}
