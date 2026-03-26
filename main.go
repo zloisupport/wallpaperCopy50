@@ -33,6 +33,7 @@ const (
 func main() {
 	setWallpaper()
 	copyRandomWallpaper()
+	createWallpaperLinkToUsers()
 }
 
 func copyRandomWallpaper() {
@@ -82,11 +83,41 @@ func copyRandomWallpaper() {
 	}
 
 }
-func pictureFolder() string {
-	userDir := strings.ToLower(os.Getenv("windir"))
-	userDir = strings.Replace(userDir, "windows", "", 1)
 
-	picturesDir := filepath.Join(userDir, "Pictures")
+func systemDrive() string {
+	systemDrive := strings.ToLower(os.Getenv("windir"))
+	systemDrive = strings.Replace(systemDrive, "windows", "", 1)
+
+	return systemDrive
+}
+
+func createWallpaperLinkToUsers() {
+	systemDrive := systemDrive();
+	users := filepath.Join(systemDrive, "users");
+
+	entries, err := os.ReadDir(users)
+	if err != nil {
+		fmt.Println("Error:", err)
+		os.Exit(1)
+	}
+
+	picturesDir := filepath.Join(systemDrive, "Pictures")
+
+	for _, entry:= range entries{
+		if entry.IsDir() {
+			err := os.Symlink(picturesDir, filepath.Join(users, entry.Name(), "Pictures", "Wallpaper"))
+			if err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+		}
+	}
+
+}
+
+func pictureFolder() string {
+	systemDrive := systemDrive();
+	picturesDir := filepath.Join(systemDrive, "Pictures")
 	if _, err := os.Stat(picturesDir); os.IsNotExist(err) {
 		if err := os.Mkdir(picturesDir, 0755); err != nil {
 			fmt.Println("Error:", err)
