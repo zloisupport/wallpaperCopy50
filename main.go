@@ -4,14 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
-	"time"
 	"unsafe"
 )
 
@@ -38,17 +36,16 @@ func main() {
 
 func copyRandomWallpaper() {
 
-	rand.Seed(time.Now().UnixNano())
 	wallpaperDir := "./wallpaper"
 
-	files, err := ioutil.ReadDir(wallpaperDir)
+	files, err := os.ReadDir(wallpaperDir)
 	if err != nil {
 		fmt.Println("Error:", err)
 		os.Exit(1)
 	}
-	var newFiles []os.FileInfo
+	var newFiles []os.DirEntry
 
-	randomFiles := make([]os.FileInfo, len(files))
+	randomFiles := make([]os.DirEntry, 0, len(files))
 
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), "jpg") {
